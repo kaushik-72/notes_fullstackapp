@@ -21,7 +21,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    //! password hash
+    //* password hash
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -31,12 +31,10 @@ export const registerUser = async (req, res) => {
       email,
     });
 
-    //! generate token
+    //* generate token
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
       expiresIn: "10m",
     });
-
-    //todo--> Email Verification
 
     res.status(201).json({
       success: true,

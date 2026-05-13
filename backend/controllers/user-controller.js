@@ -1,7 +1,9 @@
-import User from "../models/user-model.js";
+import { User } from "../models/user-model.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { verifyMail } from "../config/verify-mail.js";
 
+//~ registerUser
 export const registerUser = async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -36,12 +38,18 @@ export const registerUser = async (req, res) => {
       expiresIn: "10m",
     });
 
+    //todo--> Email Verification
+    verifyMail(token, email);
+    newUser.token = token;
+    await newUser.save();
+
     res.status(201).json({
       success: true,
       message: "User Created",
       data: newUser,
     });
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       success: false,
       message: "Something went wrong",
@@ -49,4 +57,43 @@ export const registerUser = async (req, res) => {
   }
 };
 
-export const loginUser = (req, res) => {};
+//~ loginUser
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All inputs are required",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User does't exists",
+      });
+    }
+
+    const isPassword = await bcrypt.compare(password, user.password);
+
+    if (!isPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Password mismatch",
+      });
+    }
+
+    //todo ---> CHECK IF USER IS VERIFIED OR NOT
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
+};

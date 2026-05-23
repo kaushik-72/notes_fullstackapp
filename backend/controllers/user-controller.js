@@ -48,6 +48,8 @@ export const registerUser = async (req, res) => {
       message: "User Created",
       data: newUser,
     });
+
+    // console.log(newUser);
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -58,7 +60,7 @@ export const registerUser = async (req, res) => {
 };
 
 //~ verification
-export const verification = async(req,res) =>{
+export const verification = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     console.log(authHeader);
@@ -142,7 +144,45 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    //todo ---> CHECK IF USER IS VERIFIED OR NOT
+    //& verification ? login : register first
+    
+    if (!user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "User not verified. Please Register first, check your email for verification",
+      });
+    }
+
+    //~ check exisiting session
+    const existingSession = await Session.findOne({ userId: user._id });
+    if (existingSession) {
+      await Session.deleteOne({ userId: user._id });
+    }
+
+    //~ create new session
+    await Session.create({ userId: user._id });
+
+    //~ create accessToken
+    const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "10d",
+    });
+
+    //~ create refreshToken
+    const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d",
+    });
+
+    user.isLoggedIn = true;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Welcome Back ${user.username}`,
+      accessToken,
+      refreshToken,
+      user: { username: user.username },
+    });
   } catch (error) {
     console.log(error);
 
